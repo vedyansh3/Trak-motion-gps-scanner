@@ -2,1276 +2,543 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TRAK MOTION GPS Inventory Scanner</title>
-
-<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
-*{
-  box-sizing:border-box;
-}
-
-body{
-  margin:0;
-  padding:15px;
-  font-family:Arial,sans-serif;
-  background:#f1f5f3;
-  color:#17221c;
-}
-
-.container{
-  max-width:650px;
-  margin:auto;
-}
-
-.header{
-  background:#0b7a43;
-  color:white;
-  padding:20px;
-  border-radius:16px;
-  text-align:center;
-  margin-bottom:15px;
-  box-shadow:0 4px 12px rgba(0,0,0,.12);
-}
-
-.header h1{
-  margin:0;
-  font-size:24px;
-}
-
-.header p{
-  margin:7px 0 0;
-  font-size:14px;
-}
-
-.card{
-  background:white;
-  padding:18px;
-  border-radius:16px;
-  margin-bottom:15px;
-  box-shadow:0 3px 10px rgba(0,0,0,.08);
-}
-
-.card h2{
-  margin-top:0;
-  font-size:18px;
-}
-
-label{
-  display:block;
-  font-weight:bold;
-  margin-top:14px;
-  margin-bottom:6px;
-}
-
-input,
-select,
-textarea,
-button{
-  width:100%;
-  padding:12px;
-  border-radius:10px;
-  border:1px solid #cfd8d2;
-  font-size:16px;
-}
-
-input:focus,
-select:focus,
-textarea:focus{
-  outline:none;
-  border-color:#0b7a43;
-}
-
-textarea{
-  min-height:80px;
-  resize:vertical;
-}
-
-button{
-  border:none;
-  cursor:pointer;
-  font-weight:bold;
-  margin-top:10px;
-}
-
-.primary{
-  background:#0b7a43;
-  color:white;
-}
-
-.secondary{
-  background:#e8f3ed;
-  color:#07552f;
-}
-
-.danger{
-  background:#ffe8e8;
-  color:#a40000;
-}
-
-.scanner-box{
-  width:100%;
-  min-height:250px;
-  border:2px dashed #0b7a43;
-  border-radius:14px;
-  overflow:hidden;
-  background:#fafafa;
-}
-
-.scan-status{
-  margin-top:8px;
-  padding:10px;
-  background:#f2f5f3;
-  border-radius:9px;
-  font-size:14px;
-}
-
-.message{
-  margin-top:10px;
-  padding:12px;
-  border-radius:10px;
-  display:none;
-  font-weight:bold;
-}
-
-.success{
-  display:block;
-  background:#e4f7eb;
-  color:#08602f;
-}
-
-.error{
-  display:block;
-  background:#ffe7e7;
-  color:#a00000;
-}
-
-.debug{
-  background:#101714;
-  color:#9cffc1;
-  padding:12px;
-  border-radius:10px;
-  font-family:monospace;
-  font-size:12px;
-  white-space:pre-wrap;
-  word-break:break-word;
-  overflow:auto;
-}
-
-.small{
-  font-size:12px;
-  color:#66736b;
-}
-
-.row{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:10px;
-}
-
-@media(max-width:500px){
-  .row{
-    grid-template-columns:1fr;
-  }
-}
+*{box-sizing:border-box}
+body{margin:0;padding:15px;font-family:Arial,sans-serif;background:#f1f5f3;color:#17221c}
+.container{max-width:650px;margin:auto}
+.header{background:#087b43;color:white;padding:22px;border-radius:16px;text-align:center;margin-bottom:15px}
+.header h1{margin:0;font-size:24px}
+.card{background:white;padding:18px;border-radius:15px;margin-bottom:15px;box-shadow:0 3px 10px #0000000d}
+h2{font-size:18px;margin-top:0}
+label{display:block;font-weight:bold;margin:14px 0 6px}
+input,select,textarea,button{width:100%;padding:12px;border:1px solid #cbd5ce;border-radius:10px;font-size:16px}
+textarea{min-height:75px}
+button{border:0;font-weight:bold;cursor:pointer;margin-top:10px}
+button:disabled{opacity:.6}
+.primary{background:#087b43;color:white}
+.secondary{background:#e7f3eb;color:#07532d}
+.scanner-box{width:100%;min-height:240px;border:2px dashed #087b43;border-radius:12px;overflow:hidden}
+.scan-status{padding:10px;background:#f1f5f2;border-radius:8px;margin-top:8px;font-size:14px;overflow-wrap:anywhere}
+.message{display:none;padding:12px;border-radius:9px;margin-top:10px;overflow-wrap:anywhere}
+.success{display:block;background:#e4f7eb;color:#08602f}
+.error{display:block;background:#ffe7e7;color:#a00000}
+.debug{background:#101714;color:#9cffc1;padding:12px;border-radius:10px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
+.small{font-size:12px;color:#66736b;margin-top:5px}
 </style>
 </head>
 
 <body>
-
 <div class="container">
 
-  <div class="header">
-    <h1>TRAK MOTION GPS</h1>
-    <p>Inventory Scanner</p>
-  </div>
+<header class="header">
+<h1>TRAK MOTION GPS</h1>
+<p>GPS Inventory Scanner</p>
+</header>
 
+<section class="card">
+<h2>Camera Scanner</h2>
+<label for="cameraSelect">Camera / Lens</label>
+<select id="cameraSelect"><option value="">Loading cameras...</option></select>
+<div id="scanner" class="scanner-box"></div>
+<div id="scannerStatus" class="scan-status">Preparing scanner...</div>
+<button class="primary" id="startButton" type="button">Start Camera</button>
+<button class="secondary" id="stopButton" type="button">Stop Camera</button>
+</section>
 
-  <!-- CAMERA -->
-  <div class="card">
+<section class="card">
+<h2>GPS Device</h2>
+<label for="imei">IMEI Number</label>
+<input id="imei" type="text" inputmode="numeric" autocomplete="off" placeholder="Scan GPS QR code">
+<div class="small">Scan the square QR code on your GPS device.</div>
+</section>
 
-    <h2>📷 Scanner</h2>
+<section class="card">
+<h2>SIM Information</h2>
+<label for="sim">SIM Number — Digits Only</label>
+<input id="sim" type="text" inputmode="numeric" autocomplete="off" placeholder="Scan SIM QR/barcode">
+<div class="small">Only digits from the simNo field are extracted.</div>
+</section>
 
-    <label>Camera / Lens</label>
+<section class="card">
+<h2>Device Details</h2>
 
-    <select id="cameraSelect">
-      <option value="">Select Camera</option>
-    </select>
+<label for="model">Device Model</label>
+<select id="model">
+<option value="BR05 M">BR05 M</option>
+<option value="BR05">BR05</option>
+<option value="V5">V5</option>
+<option value="SK05">SK05</option>
+<option value="OTHER">OTHER</option>
+</select>
 
-    <div
-      id="scanner"
-      class="scanner-box">
-    </div>
+<label for="relay">Relay</label>
+<select id="relay">
+<option value="12V">12V</option>
+<option value="24V">24V</option>
+</select>
 
-    <div
-      id="scannerStatus"
-      class="scan-status">
-      Camera not started.
-    </div>
+<label for="deviceStatus">Device Status</label>
+<select id="deviceStatus">
+<option value="In Stock">In Stock</option>
+<option value="Delivered">Delivered</option>
+<option value="Installed">Installed</option>
+</select>
 
-    <button
-      id="startCameraButton"
-      class="primary"
-      onclick="startScanner()">
-      Start Camera
-    </button>
+<label for="simStatusSelect">SIM Status</label>
+<select id="simStatusSelect">
+<option value="Active">Active</option>
+<option value="Inactive">Inactive</option>
+<option value="Closed">Closed</option>
+<option value="Safe custody">Safe custody</option>
+</select>
 
-    <button
-      class="secondary"
-      onclick="stopScanner()">
-      Stop Camera
-    </button>
+<label for="lockingStatusSelect">Locking Status</label>
+<select id="lockingStatusSelect">
+<option value="Not locked">Not locked</option>
+<option value="locked">locked</option>
+</select>
 
-  </div>
+<label for="remarks">Remarks</label>
+<textarea id="remarks" placeholder="Optional remarks"></textarea>
+</section>
 
+<section class="card">
+<h2>Save Inventory</h2>
+<button id="saveButton" class="primary" type="button">Save to Google Sheets</button>
+<button id="nextButton" class="secondary" type="button">Scan Next Device</button>
+<div id="save-status" class="message"></div>
+</section>
 
-  <!-- GPS DEVICE -->
-  <div class="card">
-
-    <h2>📡 GPS Device</h2>
-
-    <label for="imei">
-      IMEI Number
-    </label>
-
-    <input
-      id="imei"
-      type="text"
-      inputmode="numeric"
-      autocomplete="off"
-      placeholder="Scan GPS QR code">
-
-    <div class="small">
-      Scan the square QR code on the GPS device.
-    </div>
-
-  </div>
-
-
-  <!-- SIM -->
-  <div class="card">
-
-    <h2>📱 SIM</h2>
-
-    <label for="sim">
-      SIM Number
-    </label>
-
-    <input
-      id="sim"
-      type="text"
-      autocomplete="off"
-      placeholder="Scan SIM barcode">
-
-    <div class="small">
-      Scan the traditional barcode after scanning the GPS QR.
-    </div>
-
-  </div>
-
-
-  <!-- DEVICE DETAILS -->
-  <div class="card">
-
-    <h2>⚙️ Device Details</h2>
-
-    <label for="model">
-      Device Model
-    </label>
-
-    <select id="model">
-      <option value="BR05 M">BR05 M</option>
-      <option value="BR05">BR05</option>
-      <option value="V5">V5</option>
-      <option value="SK05">SK05</option>
-      <option value="OTHER">OTHER</option>
-    </select>
-
-
-    <label for="relay">
-      Relay
-    </label>
-
-    <select id="relay">
-      <option value="12V">12V</option>
-      <option value="24V">24V</option>
-    </select>
-
-
-    <label for="deviceStatus">
-      Device Status
-    </label>
-
-    <select id="deviceStatus">
-      <option value="In Stock">In Stock</option>
-      <option value="Delivered">Delivered</option>
-      <option value="Installed">Installed</option>
-    </select>
-
-
-    <!-- IMPORTANT:
-         This uses a UNIQUE ID.
-         It avoids the previous SIM Status ID problem.
-    -->
-
-    <label for="simStatusSelect">
-      SIM Status
-    </label>
-
-    <select id="simStatusSelect">
-      <option value="Active">Active</option>
-      <option value="Inactive">Inactive</option>
-      <option value="Closed">Closed</option>
-      <option value="Safe custody">Safe custody</option>
-    </select>
-
-
-    <label for="lockingStatusSelect">
-      Locking Status
-    </label>
-
-    <select id="lockingStatusSelect">
-      <option value="Not locked">Not locked</option>
-      <option value="locked">locked</option>
-    </select>
-
-
-    <label for="remarks">
-      Remarks
-    </label>
-
-    <textarea
-      id="remarks"
-      placeholder="Optional remarks"></textarea>
-
-  </div>
-
-
-  <!-- SAVE -->
-  <div class="card">
-
-    <h2>💾 Save Inventory</h2>
-
-    <button
-      id="saveButton"
-      class="primary"
-      onclick="saveRecord()">
-      Save to Google Sheets
-    </button>
-
-    <button
-      class="secondary"
-      onclick="scanNextDevice()">
-      Scan Next Device
-    </button>
-
-    <div
-      id="save-status"
-      class="message">
-    </div>
-
-  </div>
-
-
-  <!-- DEBUG -->
-  <div class="card">
-
-    <h2>🔍 Debug Payload</h2>
-
-    <div
-      id="debug-payload"
-      class="debug">
-      No data yet.
-    </div>
-
-  </div>
+<section class="card">
+<h2>Debug Payload</h2>
+<div id="debug-payload" class="debug">No data yet.</div>
+</section>
 
 </div>
 
-
 <script>
+"use strict";
 
-/* =========================================================
-   CONFIGURATION
-   ========================================================= */
-
+/* EXISTING APPS SCRIPT WEB APP */
 const BACKEND_URL =
 "https://script.google.com/macros/s/AKfycbwym184i4Mo9dtZjvbi7UPKCFanL5x-4D4m2yMkp7VOeenjRlzVYj0xPUwPJ5PEALJj/exec";
 
-
-/* =========================================================
-   GLOBAL VARIABLES
-   ========================================================= */
+const $ = id => document.getElementById(id);
 
 let scanner = null;
-
-let selectedCameraId = "";
-
 let scannerRunning = false;
-
-let currentScanMode = "GPS";
-
+let selectedCameraId = "";
+let scanMode = "GPS";
 let saving = false;
+let scanLocked = false;
 
+/* ---------- SIM NUMBER EXTRACTION ---------- */
 
-/* =========================================================
-   SHORT DOM HELPER
-   ========================================================= */
+function extractSimNumber(text) {
+  const value = String(text || "").trim();
 
-function $(id){
-  return document.getElementById(id);
-}
+  // Extract digits from the simNo XML attribute only.
+  const match = value.match(/\bsimNo\s*=\s*["']([^"']*)["']/i);
 
-
-/* =========================================================
-   MESSAGE
-   ========================================================= */
-
-function msg(id, text, isError){
-
-  const el = $(id);
-
-  if(!el){
-    return;
+  if (match) {
+    return match[1].replace(/\D/g, "");
   }
 
-  el.textContent = text;
+  // Plain digits returned by a barcode scanner.
+  if (/^\d+$/.test(value)) {
+    return value;
+  }
 
-  el.className =
-    "message " +
-    (isError ? "error" : "success");
+  // Plain number followed by one letter, e.g. ...6195U.
+  if (/^\d+[A-Za-z]$/.test(value)) {
+    return value.replace(/\D/g, "");
+  }
 
+  return "";
 }
 
+/* ---------- IMEI EXTRACTION ---------- */
 
-/* =========================================================
-   CAMERA LIST
-   ========================================================= */
+function extractImei(text) {
+  const value = String(text || "").trim();
 
-async function loadCameras(){
+  const labelled = value.match(
+    /\bIMEI\s*(?:NO\.?)?\s*[:=]?\s*["']?(\d{14,16})/i
+  );
 
-  try{
+  if (labelled) return labelled[1];
 
-    const cameras =
-      await Html5Qrcode.getCameras();
+  if (/^\d{14,16}$/.test(value)) return value;
 
-    const select =
-      $("cameraSelect");
+  const candidates = value.match(/\d{14,16}/g) || [];
+  if (candidates.length === 1) return candidates[0];
 
-    select.innerHTML =
-      '<option value="">Select Camera</option>';
+  return "";
+}
 
-    if(!cameras || cameras.length === 0){
+/* ---------- CAMERA LIST ---------- */
 
-      $("scannerStatus").textContent =
-        "No camera found.";
+async function loadCameras() {
+  try {
+    const cameras = await Html5Qrcode.getCameras();
+    const select = $("cameraSelect");
+    select.innerHTML = "";
 
+    if (!cameras || !cameras.length) {
+      select.add(new Option("No camera found", ""));
+      $("scannerStatus").textContent = "No camera found.";
       return;
     }
 
-    cameras.forEach((camera,index)=>{
-
-      const option =
-        document.createElement("option");
-
-      option.value =
-        camera.id;
-
-      option.textContent =
-        camera.label ||
-        ("Camera " + (index + 1));
-
-      select.appendChild(option);
-
+    cameras.forEach((camera, index) => {
+      select.add(new Option(
+        camera.label || "Camera " + (index + 1),
+        camera.id
+      ));
     });
 
-    /*
-      Try to select the rear camera.
-    */
+    const rear = cameras.find(camera =>
+      /back|rear|environment/i.test(camera.label || "")
+    );
 
-    const rear =
-      cameras.find(camera =>
-        /back|rear|environment/i
-        .test(camera.label || "")
-      );
+    selectedCameraId = (rear || cameras[0]).id;
+    select.value = selectedCameraId;
 
-    if(rear){
-
-      select.value =
-        rear.id;
-
-      selectedCameraId =
-        rear.id;
-
-    }
-    else{
-
-      select.value =
-        cameras[0].id;
-
-      selectedCameraId =
-        cameras[0].id;
-
-    }
-
-  }
-  catch(error){
-
+  } catch (error) {
     $("scannerStatus").textContent =
-      "Camera permission/error: " +
-      error.message;
-
+      "Camera error: " + error.message +
+      ". Allow camera permission and use HTTPS.";
   }
-
 }
 
+$("cameraSelect").addEventListener("change", async function() {
+  selectedCameraId = this.value;
 
-/* =========================================================
-   CAMERA CHANGE
-   ========================================================= */
+  if (scannerRunning) {
+    await stopScanner();
+    await startScanner();
+  }
+});
 
-$("cameraSelect").addEventListener(
-  "change",
-  async function(){
+/* ---------- START CAMERA ---------- */
 
-    selectedCameraId =
-      this.value;
+async function startScanner() {
+  if (scannerRunning) return;
 
-    if(scannerRunning){
+  if (!selectedCameraId) await loadCameras();
+
+  if (!selectedCameraId) {
+    $("scannerStatus").textContent = "Select a camera.";
+    return;
+  }
+
+  try {
+    scanner = new Html5Qrcode("scanner");
+    scanLocked = false;
+
+    await scanner.start(
+      selectedCameraId,
+      {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.QR_CODE,
+          Html5QrcodeSupportedFormats.CODE_128,
+          Html5QrcodeSupportedFormats.CODE_39,
+          Html5QrcodeSupportedFormats.CODE_93,
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.EAN_8,
+          Html5QrcodeSupportedFormats.ITF,
+          Html5QrcodeSupportedFormats.UPC_A,
+          Html5QrcodeSupportedFormats.UPC_E,
+          Html5QrcodeSupportedFormats.DATA_MATRIX,
+          Html5QrcodeSupportedFormats.PDF_417
+        ]
+      },
+      decodedText => {
+        if (!scanLocked) handleScan(decodedText);
+      },
+      () => {}
+    );
+
+    scannerRunning = true;
+    $("scannerStatus").textContent =
+      scanMode === "GPS"
+        ? "Scanning GPS QR code..."
+        : "Scanning SIM QR/barcode...";
+
+  } catch (error) {
+    scanner = null;
+    scannerRunning = false;
+    $("scannerStatus").textContent =
+      "Unable to start camera: " + error.message;
+  }
+}
+
+/* ---------- STOP CAMERA ---------- */
+
+async function stopScanner() {
+  const oldScanner = scanner;
+  const wasRunning = scannerRunning;
+
+  scanner = null;
+  scannerRunning = false;
+
+  if (!oldScanner) return;
+
+  try {
+    if (wasRunning) await oldScanner.stop();
+  } catch (error) {
+    console.log(error);
+  }
+
+  try {
+    await oldScanner.clear();
+  } catch (error) {
+    console.log(error);
+  }
+}
+
+/* ---------- PROCESS QR/BARCODE ---------- */
+
+async function handleScan(decodedText) {
+  if (scanLocked) return;
+  scanLocked = true;
+
+  const raw = String(decodedText || "").trim();
+
+  try {
+    if (scanMode === "GPS") {
+      const imei = extractImei(raw);
+
+      if (!imei) {
+        $("scannerStatus").textContent =
+          "IMEI not identified. Check the QR data and scan again.";
+        scanLocked = false;
+        return;
+      }
+
+      $("imei").value = imei;
+      scanMode = "SIM";
+
+      $("scannerStatus").textContent =
+        "GPS scanned. Now scan the SIM code.";
 
       await stopScanner();
 
-      await startScanner();
+      setTimeout(() => {
+        scanLocked = false;
+        startScanner();
+      }, 400);
 
-    }
+    } else {
+      const simNumber = extractSimNumber(raw);
 
-  }
-);
-
-
-/* =========================================================
-   START SCANNER
-   ========================================================= */
-
-async function startScanner(){
-
-  if(scannerRunning){
-    return;
-  }
-
-  if(!selectedCameraId){
-
-    await loadCameras();
-
-  }
-
-  if(!selectedCameraId){
-
-    $("scannerStatus").textContent =
-      "Please select a camera.";
-
-    return;
-
-  }
-
-  try{
-
-    scanner =
-      new Html5Qrcode("scanner");
-
-    scannerRunning =
-      true;
-
-    $("scannerStatus").textContent =
-      "Scanning " +
-      (currentScanMode === "GPS"
-        ? "GPS QR code..."
-        : "SIM barcode...");
-
-
-    const formatsToScan =
-      currentScanMode === "GPS"
-        ? [
-            Html5QrcodeSupportedFormats.QR_CODE
-          ]
-        : [
-            Html5QrcodeSupportedFormats.CODE_128,
-            Html5QrcodeSupportedFormats.CODE_39,
-            Html5QrcodeSupportedFormats.CODE_93,
-            Html5QrcodeSupportedFormats.EAN_13,
-            Html5QrcodeSupportedFormats.EAN_8,
-            Html5QrcodeSupportedFormats.ITF,
-            Html5QrcodeSupportedFormats.UPC_A,
-            Html5QrcodeSupportedFormats.UPC_E
-          ];
-
-
-    await scanner.start(
-
-      selectedCameraId,
-
-      {
-        fps:10,
-
-        qrbox:{
-          width:250,
-          height:250
-        },
-
-        formatsToSupport:
-          formatsToScan
-
-      },
-
-      function(decodedText){
-
-        handleScan(decodedText);
-
-      },
-
-      function(errorMessage){
-
-        /*
-          Ignore normal scan failures.
-        */
-
+      if (!simNumber) {
+        $("scannerStatus").textContent =
+          "SIM number not found. Scan the SIM code again.";
+        scanLocked = false;
+        return;
       }
 
-    );
-
-  }
-  catch(error){
-
-    scannerRunning =
-      false;
-
-    $("scannerStatus").textContent =
-      "Scanner error: " +
-      error.message;
-
-  }
-
-}
-
-
-/* =========================================================
-   STOP SCANNER
-   ========================================================= */
-
-async function stopScanner(){
-
-  if(!scanner){
-    scannerRunning =
-      false;
-    return;
-  }
-
-  try{
-
-    if(scannerRunning){
-
-      await scanner.stop();
-
-    }
-
-    await scanner.clear();
-
-  }
-  catch(error){
-
-    console.log(error);
-
-  }
-
-  scanner =
-    null;
-
-  scannerRunning =
-    false;
-
-  $("scannerStatus").textContent =
-    "Camera stopped.";
-
-}
-
-
-/* =========================================================
-   HANDLE SCAN
-   ========================================================= */
-
-async function handleScan(decodedText){
-
-  const value =
-    String(decodedText || "").trim();
-
-  if(!value){
-    return;
-  }
-
-
-  if(currentScanMode === "GPS"){
-
-    /*
-      GPS QR SCAN
-    */
-
-    const imei =
-      extractImei(value);
-
-    if(!imei){
+      $("sim").value = simNumber;
 
       $("scannerStatus").textContent =
-        "QR scanned, but IMEI was not found.";
+        "SIM scanned. Digits extracted: " + simNumber;
 
-      return;
-
+      await stopScanner();
+      scanLocked = false;
     }
-
-    $("imei").value =
-      imei;
-
-
+  } catch (error) {
+    scanLocked = false;
     $("scannerStatus").textContent =
-      "GPS QR scanned successfully. Now scan SIM barcode.";
-
-
-    currentScanMode =
-      "SIM";
-
-
-    await stopScanner();
-
-
-    /*
-      Automatically restart scanner
-      for SIM barcode.
-    */
-
-    setTimeout(
-      startScanner,
-      300
-    );
-
+      "Scan error: " + error.message;
   }
-  else{
-
-    /*
-      SIM BARCODE SCAN
-    */
-
-    $("sim").value =
-      value;
-
-
-    $("scannerStatus").textContent =
-      "SIM barcode scanned successfully.";
-
-    await stopScanner();
-
-  }
-
 }
 
+/* ---------- GET INVENTORY RECORD ---------- */
 
-/* =========================================================
-   EXTRACT IMEI
-   ========================================================= */
-
-function extractImei(text){
-
-  /*
-    First look for a normal 14-16 digit number.
-  */
-
-  const matches =
-    text.match(/\d{14,16}/g);
-
-  if(matches && matches.length){
-
-    return matches[0];
-
-  }
-
-
-  /*
-    Look for common labels.
-  */
-
-  const match =
-    text.match(
-      /IMEI\s*[:=]?\s*([0-9]{14,16})/i
-    );
-
-  if(match){
-
-    return match[1];
-
-  }
-
-  return "";
-
-}
-
-
-/* =========================================================
-   GET RECORD
-   ========================================================= */
-
-function getRecord(){
-
-  /*
-    IMPORTANT FIX:
-    SIM Status now uses a completely new unique ID.
-  */
-
-  const imeiElement =
-    document.getElementById("imei");
-
-  const simElement =
-    document.getElementById("sim");
-
-  const modelElement =
-    document.getElementById("model");
-
-  const relayElement =
-    document.getElementById("relay");
-
-  const statusElement =
-    document.getElementById("deviceStatus");
-
+function getRecord() {
   const simStatusElement =
     document.getElementById("simStatusSelect");
 
-  const lockingElement =
-    document.getElementById("lockingStatusSelect");
-
-  const remarksElement =
-    document.getElementById("remarks");
-
-
-  /*
-    Safety check.
-  */
-
-  if(!simStatusElement){
-
-    alert(
-      "ERROR: SIM Status dropdown was not found."
-    );
-
-    throw new Error(
-      "SIM Status dropdown not found."
-    );
-
+  if (!simStatusElement) {
+    throw new Error("SIM Status dropdown was not found.");
   }
 
-
-  const record = {
-
-    imei:
-      imeiElement.value.trim(),
-
-    sim:
-      simElement.value.trim(),
-
-    model:
-      modelElement.value,
-
-    relay:
-      relayElement.value,
-
-    status:
-      statusElement.value,
-
-    simStatus:
-      simStatusElement.value,
-
-    lockingStatus:
-      lockingElement.value,
-
-    remarks:
-      remarksElement.value.trim()
-
+  return {
+    imei: $("imei").value.trim(),
+    sim: $("sim").value.trim(),
+    model: $("model").value,
+    relay: $("relay").value,
+    status: $("deviceStatus").value,
+    simStatus: simStatusElement.value,
+    lockingStatus: $("lockingStatusSelect").value,
+    remarks: $("remarks").value.trim()
   };
-
-
-  return record;
-
 }
 
+/* ---------- DEBUG ---------- */
 
-/* =========================================================
-   DEBUG
-   ========================================================= */
-
-function showDebug(record){
-
+function showDebug(record) {
   $("debug-payload").textContent =
-    JSON.stringify(
-      record,
-      null,
-      2
-    );
-
+    JSON.stringify(record, null, 2);
 }
 
+/* ---------- VALIDATION ---------- */
 
-/* =========================================================
-   VALIDATE RECORD
-   ========================================================= */
-
-function validateRecord(record){
-
-  if(!record.imei){
-
-    return "IMEI Number is required.";
-
+function validateRecord(record) {
+  if (!/^\d{14,16}$/.test(record.imei)) {
+    return "IMEI must contain 14–16 digits.";
   }
 
-  if(!/^\d{14,16}$/.test(record.imei)){
-
-    return
-      "IMEI must contain 14 to 16 digits.";
-
+  if (!/^\d+$/.test(record.sim)) {
+    return "SIM number must contain digits only.";
   }
 
+  if (!record.model) return "Device Model is required.";
+  if (!record.relay) return "Relay is required.";
+  if (!record.status) return "Device Status is required.";
 
-  if(!record.sim){
-
-    return "SIM Number is required.";
-
+  if (![
+    "Active", "Inactive", "Closed", "Safe custody"
+  ].includes(record.simStatus)) {
+    return "Select a valid SIM Status.";
   }
 
-
-  if(!record.model){
-
-    return "Device Model is required.";
-
+  if (!["locked", "Not locked"].includes(record.lockingStatus)) {
+    return "Select a valid Locking Status.";
   }
-
-
-  if(!record.relay){
-
-    return "Relay is required.";
-
-  }
-
-
-  if(!record.status){
-
-    return "Device Status is required.";
-
-  }
-
-
-  if(!record.simStatus){
-
-    return "SIM Status is required.";
-
-  }
-
-
-  if(!record.lockingStatus){
-
-    return "Locking Status is required.";
-
-  }
-
 
   return "";
-
 }
 
+/* ---------- SAVE TO GOOGLE SHEETS ---------- */
 
-/* =========================================================
-   SAVE RECORD
-   ========================================================= */
+async function saveRecord() {
+  if (saving) return;
 
-async function saveRecord(){
+  saving = true;
+  $("saveButton").disabled = true;
+  $("saveButton").textContent = "Saving...";
+  $("save-status").className = "message";
 
-  if(saving){
-
-    return;
-
-  }
-
-  saving =
-    true;
-
-  $("saveButton").disabled =
-    true;
-
-  $("saveButton").textContent =
-    "Saving...";
-
-
-  try{
-
-    const record =
-      getRecord();
-
-
-    /*
-      Show EXACT payload before sending.
-    */
-
+  try {
+    const record = getRecord();
     showDebug(record);
 
+    const error = validateRecord(record);
 
-    const error =
-      validateRecord(record);
-
-
-    if(error){
-
-      msg(
-        "save-status",
-        error,
-        true
-      );
-
+    if (error) {
+      showMessage("save-status", error, true);
       return;
-
     }
 
+    const response = await fetch(BACKEND_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "text/plain;charset=utf-8"
+      },
+      body: JSON.stringify(record)
+    });
 
-    /*
-      Extra SIM Status protection.
-    */
-
-    const allowedSimStatus = [
-      "Active",
-      "Inactive",
-      "Closed",
-      "Safe custody"
-    ];
-
-
-    if(
-      !allowedSimStatus.includes(
-        record.simStatus
-      )
-    ){
-
-      msg(
-        "save-status",
-        "Invalid SIM Status: [" +
-        record.simStatus +
-        "]",
-        true
-      );
-
-      return;
-
-    }
-
-
-    /*
-      Send to Google Apps Script.
-    */
-
-    const response =
-      await fetch(
-        BACKEND_URL,
-        {
-          method:"POST",
-
-          headers:{
-            "Content-Type":
-              "text/plain;charset=utf-8"
-          },
-
-          body:
-            JSON.stringify(record)
-        }
-      );
-
-
-    const responseText =
-      await response.text();
-
-
+    const responseText = await response.text();
     let result;
 
-    try{
-
-      result =
-        JSON.parse(responseText);
-
-    }
-    catch(error){
-
+    try {
+      result = JSON.parse(responseText);
+    } catch {
       throw new Error(
-        "Server returned invalid response: " +
-        responseText
+        "Invalid server response. Check Apps Script deployment and URL. " +
+        responseText.slice(0, 250)
       );
-
     }
 
+    if (!response.ok) {
+      throw new Error("Server HTTP status: " + response.status);
+    }
 
-    if(result.success){
-
-      msg(
+    if (result.success) {
+      showMessage(
         "save-status",
-        "✅ " +
-        result.message +
-        " Row: " +
-        result.row,
+        "Saved successfully. " +
+        (result.message || "") +
+        (result.row ? " Row: " + result.row : ""),
         false
       );
-
-    }
-    else{
-
-      msg(
+    } else {
+      showMessage(
         "save-status",
-        "❌ " +
-        (result.message ||
-         "Unable to save record."),
+        result.message || "Unable to save record.",
         true
       );
-
     }
 
+  } catch (error) {
+    showMessage("save-status", "Save failed: " + error.message, true);
+  } finally {
+    saving = false;
+    $("saveButton").disabled = false;
+    $("saveButton").textContent = "Save to Google Sheets";
   }
-  catch(error){
-
-    msg(
-      "save-status",
-      "❌ " +
-      error.message,
-      true
-    );
-
-  }
-  finally{
-
-    saving =
-      false;
-
-    $("saveButton").disabled =
-      false;
-
-    $("saveButton").textContent =
-      "Save to Google Sheets";
-
-  }
-
 }
 
+function showMessage(id, message, isError) {
+  $(id).textContent = message;
+  $(id).className = "message " + (isError ? "error" : "success");
+}
 
-/* =========================================================
-   SCAN NEXT DEVICE
-   ========================================================= */
+/* ---------- NEXT DEVICE ---------- */
 
-async function scanNextDevice(){
-
+async function scanNextDevice() {
   await stopScanner();
 
+  $("imei").value = "";
+  $("sim").value = "";
+  $("remarks").value = "";
 
-  /*
-    Clear previous device.
-  */
+  $("model").value = "BR05 M";
+  $("relay").value = "12V";
+  $("deviceStatus").value = "In Stock";
+  $("simStatusSelect").value = "Active";
+  $("lockingStatusSelect").value = "Not locked";
 
-  $("imei").value =
-    "";
+  scanMode = "GPS";
+  scanLocked = false;
 
-  $("sim").value =
-    "";
-
-  $("remarks").value =
-    "";
-
-
-  /*
-    Reset dropdowns.
-  */
-
-  $("model").value =
-    "BR05 M";
-
-  $("relay").value =
-    "12V";
-
-  $("deviceStatus").value =
-    "In Stock";
-
-  $("simStatusSelect").value =
-    "Active";
-
-  $("lockingStatusSelect").value =
-    "Not locked";
-
-
-  /*
-    Reset scanner mode.
-  */
-
-  currentScanMode =
-    "GPS";
-
-
-  $("debug-payload").textContent =
-    "No data yet.";
-
-
-  $("save-status").className =
-    "message";
-
-  $("save-status").textContent =
-    "";
-
+  $("debug-payload").textContent = "No data yet.";
+  $("save-status").className = "message";
+  $("save-status").textContent = "";
 
   $("scannerStatus").textContent =
     "Ready. Start camera and scan GPS QR code.";
-
 }
 
+/* ---------- BUTTONS ---------- */
 
-/* =========================================================
-   INITIALIZATION
-   ========================================================= */
+$("startButton").addEventListener("click", startScanner);
+$("stopButton").addEventListener("click", stopScanner);
+$("saveButton").addEventListener("click", saveRecord);
+$("nextButton").addEventListener("click", scanNextDevice);
 
-window.addEventListener(
-  "load",
-  async function(){
+/* ---------- INITIALIZE ---------- */
 
-    /*
-      Set default values.
-    */
+window.addEventListener("load", async () => {
+  $("model").value = "BR05 M";
+  $("relay").value = "12V";
+  $("deviceStatus").value = "In Stock";
+  $("simStatusSelect").value = "Active";
+  $("lockingStatusSelect").value = "Not locked";
 
-    $("model").value =
-      "BR05 M";
+  await loadCameras();
 
-    $("relay").value =
-      "12V";
-
-    $("deviceStatus").value =
-      "In Stock";
-
-    $("simStatusSelect").value =
-      "Active";
-
-    $("lockingStatusSelect").value =
-      "Not locked";
-
-
-    /*
-      Load available cameras.
-    */
-
-    await loadCameras();
-
-
-    $("scannerStatus").textContent =
-      "Ready. Select camera and tap Start Camera.";
-
-  }
-);
-
+  $("scannerStatus").textContent =
+    "Ready. Select camera and tap Start Camera.";
+});
 </script>
-
 </body>
 </html>
