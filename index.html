@@ -84,6 +84,13 @@
       border-radius: 10px;
     }
 
+    #reader video,
+    #simReader video {
+      width: 100% !important;
+      height: auto !important;
+      object-fit: cover !important;
+    }
+
     .field {
       margin-bottom: 13px;
     }
@@ -175,16 +182,13 @@
       font-size: 14px;
     }
 
-    .small {
-      font-size: 12px;
-      color: #6b7280;
-    }
-
   </style>
+
 </head>
 
 
 <body>
+
 
   <div class="header">
 
@@ -198,7 +202,9 @@
   <div class="container">
 
 
-    <!-- STEP 1 -->
+    <!-- ==========================================
+         STEP 1
+         ========================================== -->
 
     <div class="card">
 
@@ -206,7 +212,10 @@
         STEP 1 — SCAN GPS QR CODE
       </div>
 
-      <div id="statusBox" class="status">
+      <div
+        id="statusBox"
+        class="status"
+      >
         Ready to scan GPS QR code.
       </div>
 
@@ -217,7 +226,7 @@
         class="primary"
         onclick="startQrScanner()"
       >
-        Start QR Scanner
+        START QR SCANNER
       </button>
 
       <button
@@ -225,13 +234,15 @@
         class="danger hidden"
         onclick="stopScanner()"
       >
-        Stop Scanner
+        STOP SCANNER
       </button>
 
     </div>
 
 
-    <!-- QR RESULT -->
+    <!-- ==========================================
+         QR RESULT
+         ========================================== -->
 
     <div
       id="qrResultCard"
@@ -250,7 +261,9 @@
     </div>
 
 
-    <!-- STEP 2 -->
+    <!-- ==========================================
+         STEP 2
+         ========================================== -->
 
     <div
       id="simCard"
@@ -275,7 +288,7 @@
         class="primary"
         onclick="startSimScanner()"
       >
-        Start SIM Barcode Scanner
+        START SIM BARCODE SCANNER
       </button>
 
       <button
@@ -283,13 +296,15 @@
         class="danger hidden"
         onclick="stopScanner()"
       >
-        Stop Scanner
+        STOP SCANNER
       </button>
 
     </div>
 
 
-    <!-- RECORD -->
+    <!-- ==========================================
+         STEP 3
+         ========================================== -->
 
     <div
       id="recordCard"
@@ -490,6 +505,7 @@
 
     </div>
 
+
   </div>
 
 
@@ -497,7 +513,7 @@
 
 
 /******************************************************
- * GOOGLE APPS SCRIPT WEB APP URL
+ * BACKEND URL
  ******************************************************/
 
 const BACKEND_URL =
@@ -505,7 +521,7 @@ const BACKEND_URL =
 
 
 /******************************************************
- * GLOBAL VARIABLES
+ * GLOBALS
  ******************************************************/
 
 let qrScanner = null;
@@ -520,13 +536,94 @@ let simScanned = false;
 
 
 /******************************************************
- * CAMERA SELECTION
+ * GET REAR CAMERA
+ *
+ * We request the environment/rear camera.
+ *
+ * We also request zoom = 1 where supported.
+ *
+ * IMPORTANT:
+ * Browser hardware APIs do not guarantee that
+ * "environment" maps to a particular physical lens.
  ******************************************************/
 
-async function getMainRearCamera() {
+async function getRearCamera() {
+
+  if (
+    !navigator.mediaDevices ||
+    !navigator.mediaDevices.getUserMedia
+  ) {
+
+    throw new Error(
+      "Camera access is not supported by this browser."
+    );
+
+  }
+
+
+  /*
+   * Request permission first.
+   *
+   * This is important because camera labels are
+   * often hidden until permission is granted.
+   */
+
+  let temporaryStream = null;
+
+
+  try {
+
+    temporaryStream =
+      await navigator.mediaDevices.getUserMedia({
+
+        video: {
+
+          facingMode: {
+            ideal: "environment"
+          },
+
+          /*
+           * Request 1× / no digital zoom
+           * where the browser supports it.
+           */
+
+          zoom: {
+            ideal: 1
+          }
+
+        },
+
+        audio: false
+
+      });
+
+
+  } finally {
+
+    if (temporaryStream) {
+
+      temporaryStream
+        .getTracks()
+        .forEach(
+          function(track) {
+
+            track.stop();
+
+          }
+        );
+
+    }
+
+  }
+
+
+  /*
+   * Now ask html5-qrcode for the available cameras.
+   */
 
   const cameras =
     await Html5Qrcode.getCameras();
+
 
   if (
     !cameras ||
@@ -534,19 +631,17 @@ async function getMainRearCamera() {
   ) {
 
     throw new Error(
-      "No camera found."
+      "No camera was detected."
     );
 
   }
 
 
   /*
-   * First preference:
-   * Rear/back camera WITHOUT
-   * Ultra Wide / Wide.
+   * Look for a rear/back camera.
    */
 
-  let camera =
+  let rearCamera =
     cameras.find(
       function(camera) {
 
@@ -555,21 +650,12 @@ async function getMainRearCamera() {
             camera.label || ""
           ).toLowerCase();
 
+
         return (
 
-          (
-            label.includes("back") ||
-            label.includes("rear") ||
-            label.includes("environment")
-          )
-
-          &&
-
-          !label.includes("ultra")
-
-          &&
-
-          !label.includes("wide")
+          label.includes("back") ||
+          label.includes("rear") ||
+          label.includes("environment")
 
         );
 
@@ -578,59 +664,19 @@ async function getMainRearCamera() {
 
 
   /*
-   * Second preference:
-   * Any rear/back camera.
+   * If Chrome doesn't provide a useful label,
+   * use the environment-facing camera through
+   * facingMode instead.
    */
 
-  if (!camera) {
+  if (!rearCamera) {
 
-    camera =
-      cameras.find(
-        function(camera) {
-
-          const label =
-            String(
-              camera.label || ""
-            ).toLowerCase();
-
-          return (
-            label.includes("back") ||
-            label.includes("rear")
-          );
-
-        }
-      );
+    return null;
 
   }
 
 
-  /*
-   * Third preference:
-   * First available camera.
-   */
-
-  if (!camera) {
-
-    camera =
-      cameras[0];
-
-  }
-
-
-  return camera;
-
-}
-
-
-/******************************************************
- * STATUS
- ******************************************************/
-
-function setStatus(message) {
-
-  document.getElementById(
-    "statusBox"
-  ).textContent = message;
+  return rearCamera;
 
 }
 
@@ -650,12 +696,12 @@ async function startQrScanner() {
 
 
     setStatus(
-      "Selecting main rear camera..."
+      "Opening normal rear camera..."
     );
 
 
     const camera =
-      await getMainRearCamera();
+      await getRearCamera();
 
 
     qrScanner =
@@ -668,32 +714,52 @@ async function startQrScanner() {
       qrScanner;
 
 
-    setStatus(
-      "Starting main rear camera..."
-    );
+    document
+      .getElementById(
+        "startQrButton"
+      )
+      .classList.add(
+        "hidden"
+      );
 
 
-    document.getElementById(
-      "startQrButton"
-    ).classList.add("hidden");
+    document
+      .getElementById(
+        "stopQrButton"
+      )
+      .classList.remove(
+        "hidden"
+      );
 
 
-    document.getElementById(
-      "stopQrButton"
-    ).classList.remove("hidden");
+    /*
+     * If a rear camera ID is available,
+     * use that exact camera.
+     *
+     * Otherwise use the environment camera.
+     */
+
+    const cameraConfig =
+      camera
+        ? camera.id
+        : {
+            facingMode: {
+              ideal: "environment"
+            }
+          };
 
 
     await qrScanner.start(
 
-      camera.id,
+      cameraConfig,
 
       {
 
-        fps: 10,
+        fps: 15,
 
         qrbox: {
-          width: 250,
-          height: 250
+          width: 260,
+          height: 260
         },
 
         formatsToSupport: [
@@ -710,7 +776,9 @@ async function startQrScanner() {
           return;
         }
 
+
         qrScanned = true;
+
 
         handleQrResult(
           decodedText
@@ -720,8 +788,9 @@ async function startQrScanner() {
 
       function(errorMessage) {
 
-        // Normal scan failure.
-        // Ignore.
+        /*
+         * Normal scan failures are ignored.
+         */
 
       }
 
@@ -729,7 +798,7 @@ async function startQrScanner() {
 
 
     setStatus(
-      "Main rear camera active. Point it at the GPS QR code."
+      "1× rear camera active. Scan the GPS QR code."
     );
 
 
@@ -737,18 +806,14 @@ async function startQrScanner() {
 
     console.error(error);
 
+
     setStatus(
       "Camera error: " +
       error.message
     );
 
-    document.getElementById(
-      "startQrButton"
-    ).classList.remove("hidden");
 
-    document.getElementById(
-      "stopQrButton"
-    ).classList.add("hidden");
+    resetScannerButtons();
 
   }
 
@@ -756,7 +821,7 @@ async function startQrScanner() {
 
 
 /******************************************************
- * HANDLE QR RESULT
+ * QR RESULT
  ******************************************************/
 
 async function handleQrResult(
@@ -768,17 +833,21 @@ async function handleQrResult(
   );
 
 
-  document.getElementById(
-    "qrRawResult"
-  ).textContent =
-    decodedText;
+  document
+    .getElementById(
+      "qrRawResult"
+    )
+    .textContent =
+      decodedText;
 
 
-  document.getElementById(
-    "qrResultCard"
-  ).classList.remove(
-    "hidden"
-  );
+  document
+    .getElementById(
+      "qrResultCard"
+    )
+    .classList.remove(
+      "hidden"
+    );
 
 
   parseQrData(
@@ -789,23 +858,27 @@ async function handleQrResult(
   await stopScanner();
 
 
-  document.getElementById(
-    "simCard"
-  ).classList.remove(
-    "hidden"
-  );
+  document
+    .getElementById(
+      "simCard"
+    )
+    .classList.remove(
+      "hidden"
+    );
 
 
-  document.getElementById(
-    "simStatusBox"
-  ).textContent =
-    "QR complete. Now scan the SIM barcode.";
+  document
+    .getElementById(
+      "simStatusBox"
+    )
+    .textContent =
+      "QR complete. Now scan the SIM barcode.";
 
 }
 
 
 /******************************************************
- * PARSE QR DATA
+ * PARSE QR
  ******************************************************/
 
 function parseQrData(
@@ -818,7 +891,7 @@ function parseQrData(
 
 
   /*
-   * Try JSON
+   * JSON QR
    */
 
   try {
@@ -868,13 +941,15 @@ function parseQrData(
 
   } catch (error) {
 
-    // Not JSON.
+    /*
+     * Not JSON.
+     */
 
   }
 
 
   /*
-   * Find IMEI in normal text
+   * Find IMEI in normal text.
    */
 
   if (!imei) {
@@ -896,7 +971,7 @@ function parseQrData(
 
 
   /*
-   * Find model
+   * Find model.
    */
 
   if (!model) {
@@ -939,26 +1014,26 @@ function parseQrData(
   }
 
 
-  /*
-   * Put values into form
-   */
-
   if (imei) {
 
-    document.getElementById(
-      "imei"
-    ).value =
-      imei;
+    document
+      .getElementById(
+        "imei"
+      )
+      .value =
+        imei;
 
   }
 
 
   if (model) {
 
-    document.getElementById(
-      "model"
-    ).value =
-      model;
+    document
+      .getElementById(
+        "model"
+      )
+      .value =
+        model;
 
   }
 
@@ -966,7 +1041,7 @@ function parseQrData(
 
 
 /******************************************************
- * START SIM BARCODE SCANNER
+ * START SIM BARCODE
  ******************************************************/
 
 async function startSimScanner() {
@@ -979,14 +1054,16 @@ async function startSimScanner() {
     simScanned = false;
 
 
-    document.getElementById(
-      "simStatusBox"
-    ).textContent =
-      "Selecting main rear camera...";
+    document
+      .getElementById(
+        "simStatusBox"
+      )
+      .textContent =
+        "Opening normal rear camera...";
 
 
     const camera =
-      await getMainRearCamera();
+      await getRearCamera();
 
 
     simScanner =
@@ -999,27 +1076,45 @@ async function startSimScanner() {
       simScanner;
 
 
-    document.getElementById(
-      "startSimButton"
-    ).classList.add("hidden");
+    document
+      .getElementById(
+        "startSimButton"
+      )
+      .classList.add(
+        "hidden"
+      );
 
 
-    document.getElementById(
-      "stopSimButton"
-    ).classList.remove("hidden");
+    document
+      .getElementById(
+        "stopSimButton"
+      )
+      .classList.remove(
+        "hidden"
+      );
+
+
+    const cameraConfig =
+      camera
+        ? camera.id
+        : {
+            facingMode: {
+              ideal: "environment"
+            }
+          };
 
 
     await simScanner.start(
 
-      camera.id,
+      cameraConfig,
 
       {
 
-        fps: 10,
+        fps: 15,
 
         qrbox: {
-          width: 300,
-          height: 150
+          width: 320,
+          height: 160
         },
 
         formatsToSupport: [
@@ -1048,6 +1143,7 @@ async function startSimScanner() {
           return;
         }
 
+
         simScanned = true;
 
 
@@ -1059,18 +1155,21 @@ async function startSimScanner() {
 
       function(errorMessage) {
 
-        // Normal scan failure.
-        // Ignore.
+        /*
+         * Normal scan failures ignored.
+         */
 
       }
 
     );
 
 
-    document.getElementById(
-      "simStatusBox"
-    ).textContent =
-      "Main rear camera active. Point it at the SIM barcode.";
+    document
+      .getElementById(
+        "simStatusBox"
+      )
+      .textContent =
+        "1× rear camera active. Scan the SIM barcode.";
 
 
   } catch (error) {
@@ -1078,25 +1177,16 @@ async function startSimScanner() {
     console.error(error);
 
 
-    document.getElementById(
-      "simStatusBox"
-    ).textContent =
-      "Barcode camera error: " +
-      error.message;
+    document
+      .getElementById(
+        "simStatusBox"
+      )
+      .textContent =
+        "Barcode camera error: " +
+        error.message;
 
 
-    document.getElementById(
-      "startSimButton"
-    ).classList.remove(
-      "hidden"
-    );
-
-
-    document.getElementById(
-      "stopSimButton"
-    ).classList.add(
-      "hidden"
-    );
+    resetScannerButtons();
 
   }
 
@@ -1104,33 +1194,39 @@ async function startSimScanner() {
 
 
 /******************************************************
- * HANDLE SIM RESULT
+ * SIM RESULT
  ******************************************************/
 
 async function handleSimResult(
   decodedText
 ) {
 
-  document.getElementById(
-    "sim"
-  ).value =
-    decodedText;
+  document
+    .getElementById(
+      "sim"
+    )
+    .value =
+      decodedText;
 
 
-  document.getElementById(
-    "simStatusBox"
-  ).textContent =
-    "SIM barcode scanned successfully.";
+  document
+    .getElementById(
+      "simStatusBox"
+    )
+    .textContent =
+      "SIM barcode scanned successfully.";
 
 
   await stopScanner();
 
 
-  document.getElementById(
-    "recordCard"
-  ).classList.remove(
-    "hidden"
-  );
+  document
+    .getElementById(
+      "recordCard"
+    )
+    .classList.remove(
+      "hidden"
+    );
 
 }
 
@@ -1145,6 +1241,10 @@ async function stopScanner() {
     currentScanner;
 
 
+  currentScanner =
+    null;
+
+
   if (!scanner) {
 
     resetScannerButtons();
@@ -1152,10 +1252,6 @@ async function stopScanner() {
     return;
 
   }
-
-
-  currentScanner =
-    null;
 
 
   try {
@@ -1199,43 +1295,54 @@ async function stopScanner() {
 
 
 /******************************************************
- * RESET SCANNER BUTTONS
+ * BUTTON RESET
  ******************************************************/
 
 function resetScannerButtons() {
 
-  document.getElementById(
-    "startQrButton"
-  ).classList.remove(
-    "hidden"
-  );
+  document
+    .getElementById(
+      "startQrButton"
+    )
+    .classList.remove(
+      "hidden"
+    );
 
 
-  document.getElementById(
-    "stopQrButton"
-  ).classList.add(
-    "hidden"
-  );
+  document
+    .getElementById(
+      "stopQrButton"
+    )
+    .classList.add(
+      "hidden"
+    );
 
 
-  document.getElementById(
-    "startSimButton"
-  ).classList.remove(
-    "hidden"
-  );
+  document
+    .getElementById(
+      "startSimButton"
+    )
+    .classList.remove(
+      "hidden"
+    );
 
 
-  document.getElementById(
-    "stopSimButton"
-  ).classList.add(
-    "hidden"
-  );
+  document
+    .getElementById(
+      "stopSimButton"
+    )
+    .classList.add(
+      "hidden"
+    );
 
 }
 
 
 /******************************************************
- * SAVE RECORD
+ * SAVE
+ *
+ * This remains ready for the backend.
+ * doPost() still needs to be added to Apps Script.
  ******************************************************/
 
 async function saveRecord() {
@@ -1294,10 +1401,6 @@ async function saveRecord() {
   };
 
 
-  /*
-   * Validate IMEI
-   */
-
   if (
     !/^\d{14,16}$/.test(
       record.imei
@@ -1314,10 +1417,6 @@ async function saveRecord() {
   }
 
 
-  /*
-   * Validate SIM
-   */
-
   if (!record.sim) {
 
     showMessage(
@@ -1330,10 +1429,6 @@ async function saveRecord() {
   }
 
 
-  /*
-   * Validate model
-   */
-
   if (!record.model) {
 
     showMessage(
@@ -1345,10 +1440,6 @@ async function saveRecord() {
 
   }
 
-
-  /*
-   * Validate relay
-   */
 
   if (!record.relay) {
 
@@ -1414,12 +1505,9 @@ async function saveRecord() {
     ) {
 
       showMessage(
-
         "✅ Record saved successfully. Row: " +
         result.row,
-
         true
-
       );
 
 
@@ -1440,9 +1528,6 @@ async function saveRecord() {
 
 
   } catch (error) {
-
-    console.error(error);
-
 
     showMessage(
 
@@ -1468,7 +1553,7 @@ async function saveRecord() {
 
 
 /******************************************************
- * SHOW MESSAGE
+ * MESSAGE
  ******************************************************/
 
 function showMessage(
@@ -1500,7 +1585,7 @@ function showMessage(
 
 
 /******************************************************
- * RESET FOR NEXT DEVICE
+ * NEXT DEVICE
  ******************************************************/
 
 async function resetScanner() {
@@ -1515,81 +1600,107 @@ async function resetScanner() {
     false;
 
 
-  document.getElementById(
-    "imei"
-  ).value = "";
+  document
+    .getElementById(
+      "imei"
+    )
+    .value = "";
 
 
-  document.getElementById(
-    "sim"
-  ).value = "";
+  document
+    .getElementById(
+      "sim"
+    )
+    .value = "";
 
 
-  document.getElementById(
-    "model"
-  ).value = "";
+  document
+    .getElementById(
+      "model"
+    )
+    .value = "";
 
 
-  document.getElementById(
-    "relay"
-  ).value = "";
+  document
+    .getElementById(
+      "relay"
+    )
+    .value = "";
 
 
-  document.getElementById(
-    "status"
-  ).value =
-    "In Stock";
+  document
+    .getElementById(
+      "status"
+    )
+    .value =
+      "In Stock";
 
 
-  document.getElementById(
-    "simStatus"
-  ).value =
-    "Active";
+  document
+    .getElementById(
+      "simStatus"
+    )
+    .value =
+      "Active";
 
 
-  document.getElementById(
-    "lockingStatus"
-  ).value =
-    "Not locked";
+  document
+    .getElementById(
+      "lockingStatus"
+    )
+    .value =
+      "Not locked";
 
 
-  document.getElementById(
-    "remarks"
-  ).value = "";
+  document
+    .getElementById(
+      "remarks"
+    )
+    .value = "";
 
 
-  document.getElementById(
-    "qrResultCard"
-  ).classList.add(
-    "hidden"
-  );
+  document
+    .getElementById(
+      "qrResultCard"
+    )
+    .classList.add(
+      "hidden"
+    );
 
 
-  document.getElementById(
-    "simCard"
-  ).classList.add(
-    "hidden"
-  );
+  document
+    .getElementById(
+      "simCard"
+    )
+    .classList.add(
+      "hidden"
+    );
 
 
-  document.getElementById(
-    "recordCard"
-  ).classList.add(
-    "hidden"
-  );
+  document
+    .getElementById(
+      "recordCard"
+    )
+    .classList.add(
+      "hidden"
+    );
 
 
-  document.getElementById(
-    "message"
-  ).classList.add(
-    "hidden"
-  );
+  document
+    .getElementById(
+      "message"
+    )
+    .classList.add(
+      "hidden"
+    );
 
 
-  document.getElementById(
-    "statusBox"
-  ).textContent =
-    "Ready to scan GPS QR code.";
+  document
+    .getElementById(
+      "statusBox"
+    )
+    .textContent =
+      "Ready to scan GPS QR code.";
 
 
   resetScannerButtons();
