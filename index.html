@@ -142,15 +142,18 @@
       margin-top: 4px;
     }
 
+    /* SQUARE CAMERA PREVIEW */
     #reader {
       width: 100%;
-      min-height: 185px;
-      height: 185px;
+      aspect-ratio: 1 / 1;
+      height: auto;
+      min-height: 0;
       overflow: hidden;
       border: 1px dashed #168653;
       border-radius: 9px;
       background: #fafcfb;
       margin: 4px 0 8px;
+      position: relative;
     }
 
     #reader video {
@@ -234,18 +237,6 @@
 
     .btn-secondary:hover {
       background: #dceee3;
-    }
-
-    .btn-outline {
-      color: var(--green-dark);
-      background: white;
-      border: 1px solid #b8d8c5;
-    }
-
-    .section-divider {
-      border: 0;
-      border-top: 1px solid #edf0ed;
-      margin: 12px 0;
     }
 
     #debugPayload {
@@ -407,7 +398,7 @@
     </div>
   </section>
 
-  <!-- SAVE -->
+  <!-- SAVE INVENTORY -->
   <section class="card">
     <h2>🗃️ Save Inventory</h2>
 
@@ -424,7 +415,7 @@
     </button>
   </section>
 
-  <!-- DEBUG -->
+  <!-- DEBUG PAYLOAD -->
   <section class="card">
     <h2>🔎 Debug Payload</h2>
     <div id="debugPayload">
@@ -432,12 +423,14 @@
     </div>
   </section>
 
-  <div class="footer">TRAK MOTION GPS · Inventory Management</div>
+  <div class="footer">
+    TRAK MOTION GPS · Inventory Management
+  </div>
 
 </div>
 
 <script>
-  // EXISTING GOOGLE APPS SCRIPT WEB APP URL
+  // YOUR EXISTING GOOGLE APPS SCRIPT WEB APP
   const API_URL =
     "https://script.google.com/macros/s/AKfycbwym184i4Mo9dtZjvbi7UPKCFanL5x-4D4m2yMkp7VOeenjRlzVYj0xPUwPJ5PEALJj/exec";
 
@@ -463,7 +456,7 @@
     el.className = "status" + (type ? " " + type : "");
   }
 
-  // Extract IMEI from a GPS QR payload.
+  // Extract the IMEI from the GPS QR code.
   function extractImei(text) {
     const value = String(text || "").trim();
 
@@ -484,9 +477,8 @@
     return "";
   }
 
-  // Preserve the complete SIM number, including a trailing U.
-  // Example XML:
-  // <PrintLetterBarcodeData simNo="8991542404594136203U" ... />
+  // Preserve the trailing U in SIM numbers.
+  // Example: 8991542404594136203U
   function extractSimNumber(text) {
     const value = String(text || "").trim();
 
@@ -498,7 +490,7 @@
       return match[1].trim();
     }
 
-    // Also supports a barcode that directly contains the SIM number.
+    // Accept digits with an optional final letter.
     if (/^\d+[A-Za-z]?$/.test(value)) {
       return value;
     }
@@ -541,9 +533,9 @@
         "Ready. Select camera and tap Start Camera."
       );
     } catch (error) {
-      select.add(new Option("Allow camera permission, then retry", ""));
+      select.add(new Option("Camera permission required", ""));
       showScanMessage(
-        "Could not load cameras. Check browser permissions and use HTTPS.",
+        "Could not load cameras. Allow camera access and refresh.",
         "error"
       );
     }
@@ -555,18 +547,26 @@
       return;
     }
 
+    if (!window.Html5Qrcode) {
+      showScanMessage(
+        "Scanner library did not load. Check your internet connection.",
+        "error"
+      );
+      return;
+    }
+
+    if (!$("cameraSelect").value) {
+      await loadCameras();
+    }
+
     const cameraId = $("cameraSelect").value;
 
     if (!cameraId) {
-      await loadCameras();
-
-      if (!$("cameraSelect").value) {
-        showScanMessage(
-          "No camera selected. Check camera permission.",
-          "error"
-        );
-        return;
-      }
+      showScanMessage(
+        "No camera selected. Check camera permission.",
+        "error"
+      );
+      return;
     }
 
     try {
@@ -579,26 +579,25 @@
 
       showScanMessage(
         scanMode === "gps"
-          ? "Camera starting. Scan the GPS device QR code."
-          : "Camera starting. Scan the SIM barcode."
+          ? "Starting camera. Scan the GPS device QR code."
+          : "Starting camera. Scan the SIM barcode."
       );
 
-      const selectedCamera = $("cameraSelect").value;
-
       await scanner.start(
-        selectedCamera,
+        cameraId,
         {
           fps: 10,
-          qrbox: { width: 240, height: 180 },
+          qrbox: { width: 200, height: 200 },
           aspectRatio: 1.0
         },
         onScanSuccess,
         function () {
-          // Normal unsuccessful frame: keep scanning.
+          // Ignore normal unsuccessful frames.
         }
       );
 
       cameraRunning = true;
+
       showScanMessage(
         scanMode === "gps"
           ? "Camera ready. Scan the GPS QR code first."
@@ -607,6 +606,7 @@
       );
     } catch (error) {
       cameraRunning = false;
+
       showScanMessage(
         "Could not start camera. Check permissions or select another camera.",
         "error"
@@ -708,7 +708,6 @@
       return "Please scan a valid 14–16 digit IMEI number.";
     }
 
-    // Digits with an optional final letter, such as U.
     if (!/^\d+[A-Za-z]?$/.test(record.sim)) {
       return "SIM number must contain digits and may end with a letter.";
     }
@@ -730,9 +729,8 @@
   }
 
   function updateDebugPayload() {
-    const record = getRecord();
     $("debugPayload").textContent =
-      JSON.stringify(record, null, 2);
+      JSON.stringify(getRecord(), null, 2);
   }
 
   async function saveRecord() {
@@ -779,7 +777,7 @@
       }
     } catch (error) {
       showSaveMessage(
-        "Could not confirm the save. Check your internet connection and backend deployment before retrying.",
+        "Could not confirm the save. Check your connection and backend deployment before retrying.",
         "error"
       );
     } finally {
@@ -804,6 +802,7 @@
     processingScan = false;
 
     $("saveMessage").hidden = true;
+
     $("debugPayload").innerHTML =
       '<div class="debug-empty">No data yet.</div>';
 
@@ -813,14 +812,12 @@
         : "Ready. Select camera and tap Start Camera."
     );
 
-    if (cameraRunning) {
-      scanMode = "gps";
-    }
-
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth"
+    });
   }
 
-  // Refresh the debug display when fields are edited.
   [
     "imei",
     "sim",
@@ -835,7 +832,6 @@
     $(id).addEventListener("change", updateDebugPayload);
   });
 
-  // Initialize the camera list.
   window.addEventListener("load", loadCameras);
 </script>
 </body>
