@@ -12,12 +12,12 @@
   "theme_color": "#087b45",
   "icons": [
     {
-      "src": "./icons/icon-192.png",
+      "src": "./icons/icon-192-1.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "./icons/icon-512.png",
+      "src": "./icons/icon-512-1.png",
       "sizes": "512x512",
       "type": "image/png"
     }
