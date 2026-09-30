@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
 
@@ -10,10 +11,13 @@
 
   <title>Trak Motion GPS Inventory Scanner</title>
 
-  <!-- QR + Barcode scanner library -->
-  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+  <script
+    src="https://unpkg.com/html5-qrcode"
+    type="text/javascript">
+  </script>
 
   <style>
+
     * {
       box-sizing: border-box;
     }
@@ -73,7 +77,8 @@
       font-size: 14px;
     }
 
-    #reader {
+    #reader,
+    #simReader {
       width: 100%;
       overflow: hidden;
       border-radius: 10px;
@@ -174,20 +179,27 @@
       font-size: 12px;
       color: #6b7280;
     }
+
   </style>
 </head>
+
 
 <body>
 
   <div class="header">
+
     <h1>TRAK MOTION GPS</h1>
+
     <p>Inventory Scanner</p>
+
   </div>
 
 
   <div class="container">
 
+
     <!-- STEP 1 -->
+
     <div class="card">
 
       <div class="step">
@@ -220,6 +232,7 @@
 
 
     <!-- QR RESULT -->
+
     <div
       id="qrResultCard"
       class="card hidden"
@@ -238,6 +251,7 @@
 
 
     <!-- STEP 2 -->
+
     <div
       id="simCard"
       class="card hidden"
@@ -247,7 +261,10 @@
         STEP 2 — SCAN SIM BARCODE
       </div>
 
-      <div id="simStatusBox" class="status">
+      <div
+        id="simStatusBox"
+        class="status"
+      >
         Ready to scan SIM barcode.
       </div>
 
@@ -273,6 +290,7 @@
 
 
     <!-- RECORD -->
+
     <div
       id="recordCard"
       class="card hidden"
@@ -284,6 +302,7 @@
 
 
       <div class="field">
+
         <label>IMEI No.</label>
 
         <input
@@ -292,20 +311,24 @@
           inputmode="numeric"
           maxlength="16"
         >
+
       </div>
 
 
       <div class="field">
+
         <label>SIM No.</label>
 
         <input
           id="sim"
           type="text"
         >
+
       </div>
 
 
       <div class="field">
+
         <label>Device Model</label>
 
         <select id="model">
@@ -335,10 +358,12 @@
           </option>
 
         </select>
+
       </div>
 
 
       <div class="field">
+
         <label>Relay</label>
 
         <select id="relay">
@@ -356,10 +381,12 @@
           </option>
 
         </select>
+
       </div>
 
 
       <div class="field">
+
         <label>Status</label>
 
         <select id="status">
@@ -377,10 +404,12 @@
           </option>
 
         </select>
+
       </div>
 
 
       <div class="field">
+
         <label>SIM Status</label>
 
         <select id="simStatus">
@@ -402,10 +431,12 @@
           </option>
 
         </select>
+
       </div>
 
 
       <div class="field">
+
         <label>Locking Status</label>
 
         <select id="lockingStatus">
@@ -419,16 +450,19 @@
           </option>
 
         </select>
+
       </div>
 
 
       <div class="field">
+
         <label>Remarks</label>
 
         <textarea
           id="remarks"
           placeholder="Optional remarks"
         ></textarea>
+
       </div>
 
 
@@ -461,6 +495,7 @@
 
 <script>
 
+
 /******************************************************
  * GOOGLE APPS SCRIPT WEB APP URL
  ******************************************************/
@@ -474,16 +509,121 @@ const BACKEND_URL =
  ******************************************************/
 
 let qrScanner = null;
+
 let simScanner = null;
 
 let currentScanner = null;
 
 let qrScanned = false;
+
 let simScanned = false;
 
 
 /******************************************************
- * STATUS MESSAGE
+ * CAMERA SELECTION
+ ******************************************************/
+
+async function getMainRearCamera() {
+
+  const cameras =
+    await Html5Qrcode.getCameras();
+
+  if (
+    !cameras ||
+    cameras.length === 0
+  ) {
+
+    throw new Error(
+      "No camera found."
+    );
+
+  }
+
+
+  /*
+   * First preference:
+   * Rear/back camera WITHOUT
+   * Ultra Wide / Wide.
+   */
+
+  let camera =
+    cameras.find(
+      function(camera) {
+
+        const label =
+          String(
+            camera.label || ""
+          ).toLowerCase();
+
+        return (
+
+          (
+            label.includes("back") ||
+            label.includes("rear") ||
+            label.includes("environment")
+          )
+
+          &&
+
+          !label.includes("ultra")
+
+          &&
+
+          !label.includes("wide")
+
+        );
+
+      }
+    );
+
+
+  /*
+   * Second preference:
+   * Any rear/back camera.
+   */
+
+  if (!camera) {
+
+    camera =
+      cameras.find(
+        function(camera) {
+
+          const label =
+            String(
+              camera.label || ""
+            ).toLowerCase();
+
+          return (
+            label.includes("back") ||
+            label.includes("rear")
+          );
+
+        }
+      );
+
+  }
+
+
+  /*
+   * Third preference:
+   * First available camera.
+   */
+
+  if (!camera) {
+
+    camera =
+      cameras[0];
+
+  }
+
+
+  return camera;
+
+}
+
+
+/******************************************************
+ * STATUS
  ******************************************************/
 
 function setStatus(message) {
@@ -491,6 +631,7 @@ function setStatus(message) {
   document.getElementById(
     "statusBox"
   ).textContent = message;
+
 }
 
 
@@ -502,23 +643,40 @@ async function startQrScanner() {
 
   try {
 
-    stopScanner();
+    await stopScanner();
+
+
+    qrScanned = false;
+
+
+    setStatus(
+      "Selecting main rear camera..."
+    );
+
+
+    const camera =
+      await getMainRearCamera();
+
 
     qrScanner =
-      new Html5Qrcode("reader");
+      new Html5Qrcode(
+        "reader"
+      );
+
 
     currentScanner =
       qrScanner;
 
-    qrScanned = false;
 
     setStatus(
-      "Starting camera. Point it at the GPS QR code."
+      "Starting main rear camera..."
     );
+
 
     document.getElementById(
       "startQrButton"
     ).classList.add("hidden");
+
 
     document.getElementById(
       "stopQrButton"
@@ -527,11 +685,10 @@ async function startQrScanner() {
 
     await qrScanner.start(
 
-      {
-        facingMode: "environment"
-      },
+      camera.id,
 
       {
+
         fps: 10,
 
         qrbox: {
@@ -540,8 +697,11 @@ async function startQrScanner() {
         },
 
         formatsToSupport: [
+
           Html5QrcodeSupportedFormats.QR_CODE
+
         ]
+
       },
 
       function(decodedText) {
@@ -552,24 +712,46 @@ async function startQrScanner() {
 
         qrScanned = true;
 
-        handleQrResult(decodedText);
+        handleQrResult(
+          decodedText
+        );
 
       },
 
       function(errorMessage) {
-        // Ignore normal scan failures.
+
+        // Normal scan failure.
+        // Ignore.
+
       }
 
     );
 
+
+    setStatus(
+      "Main rear camera active. Point it at the GPS QR code."
+    );
+
+
   } catch (error) {
+
+    console.error(error);
 
     setStatus(
       "Camera error: " +
       error.message
     );
 
+    document.getElementById(
+      "startQrButton"
+    ).classList.remove("hidden");
+
+    document.getElementById(
+      "stopQrButton"
+    ).classList.add("hidden");
+
   }
+
 }
 
 
@@ -577,27 +759,42 @@ async function startQrScanner() {
  * HANDLE QR RESULT
  ******************************************************/
 
-async function handleQrResult(decodedText) {
+async function handleQrResult(
+  decodedText
+) {
 
   setStatus(
     "QR scanned successfully."
   );
 
+
   document.getElementById(
     "qrRawResult"
-  ).textContent = decodedText;
+  ).textContent =
+    decodedText;
+
 
   document.getElementById(
     "qrResultCard"
-  ).classList.remove("hidden");
+  ).classList.remove(
+    "hidden"
+  );
 
-  parseQrData(decodedText);
+
+  parseQrData(
+    decodedText
+  );
+
 
   await stopScanner();
 
+
   document.getElementById(
     "simCard"
-  ).classList.remove("hidden");
+  ).classList.remove(
+    "hidden"
+  );
+
 
   document.getElementById(
     "simStatusBox"
@@ -611,10 +808,14 @@ async function handleQrResult(decodedText) {
  * PARSE QR DATA
  ******************************************************/
 
-function parseQrData(data) {
+function parseQrData(
+  data
+) {
 
   let imei = "";
+
   let model = "";
+
 
   /*
    * Try JSON
@@ -625,56 +826,90 @@ function parseQrData(data) {
     const parsed =
       JSON.parse(data);
 
+
     if (parsed.imei) {
-      imei = String(parsed.imei);
+
+      imei =
+        String(
+          parsed.imei
+        );
+
     }
+
 
     if (parsed.IMEI) {
-      imei = String(parsed.IMEI);
+
+      imei =
+        String(
+          parsed.IMEI
+        );
+
     }
+
 
     if (parsed.model) {
-      model = String(parsed.model);
+
+      model =
+        String(
+          parsed.model
+        );
+
     }
 
+
     if (parsed.deviceModel) {
+
       model =
-        String(parsed.deviceModel);
+        String(
+          parsed.deviceModel
+        );
+
     }
 
   } catch (error) {
 
     // Not JSON.
+
   }
 
 
   /*
-   * Try IMEI from normal text
+   * Find IMEI in normal text
    */
 
   if (!imei) {
 
     const match =
-      data.match(/\b\d{14,16}\b/);
+      data.match(
+        /\b\d{14,16}\b/
+      );
+
 
     if (match) {
-      imei = match[0];
+
+      imei =
+        match[0];
+
     }
+
   }
 
 
   /*
-   * Try model names
+   * Find model
    */
 
   if (!model) {
 
     const models = [
+
       "BR05 M",
       "BR05",
       "V5",
       "SK05"
+
     ];
+
 
     for (
       let i = 0;
@@ -683,27 +918,37 @@ function parseQrData(data) {
     ) {
 
       if (
+
         data
           .toUpperCase()
           .includes(
             models[i].toUpperCase()
           )
+
       ) {
 
         model =
           models[i];
 
         break;
+
       }
+
     }
+
   }
 
+
+  /*
+   * Put values into form
+   */
 
   if (imei) {
 
     document.getElementById(
       "imei"
-    ).value = imei;
+    ).value =
+      imei;
 
   }
 
@@ -712,9 +957,11 @@ function parseQrData(data) {
 
     document.getElementById(
       "model"
-    ).value = model;
+    ).value =
+      model;
 
   }
+
 }
 
 
@@ -726,37 +973,48 @@ async function startSimScanner() {
 
   try {
 
-    stopScanner();
+    await stopScanner();
+
+
+    simScanned = false;
+
+
+    document.getElementById(
+      "simStatusBox"
+    ).textContent =
+      "Selecting main rear camera...";
+
+
+    const camera =
+      await getMainRearCamera();
+
 
     simScanner =
-      new Html5Qrcode("simReader");
+      new Html5Qrcode(
+        "simReader"
+      );
+
 
     currentScanner =
       simScanner;
 
-    simScanned = false;
 
     document.getElementById(
       "startSimButton"
     ).classList.add("hidden");
 
+
     document.getElementById(
       "stopSimButton"
     ).classList.remove("hidden");
 
-    document.getElementById(
-      "simStatusBox"
-    ).textContent =
-      "Starting camera. Point it at the SIM barcode.";
-
 
     await simScanner.start(
 
-      {
-        facingMode: "environment"
-      },
+      camera.id,
 
       {
+
         fps: 10,
 
         qrbox: {
@@ -781,6 +1039,7 @@ async function startSimScanner() {
           Html5QrcodeSupportedFormats.UPC_E
 
         ]
+
       },
 
       function(decodedText) {
@@ -791,17 +1050,33 @@ async function startSimScanner() {
 
         simScanned = true;
 
-        handleSimResult(decodedText);
+
+        handleSimResult(
+          decodedText
+        );
 
       },
 
       function(errorMessage) {
-        // Ignore normal scan failures.
+
+        // Normal scan failure.
+        // Ignore.
+
       }
 
     );
 
+
+    document.getElementById(
+      "simStatusBox"
+    ).textContent =
+      "Main rear camera active. Point it at the SIM barcode.";
+
+
   } catch (error) {
+
+    console.error(error);
+
 
     document.getElementById(
       "simStatusBox"
@@ -809,7 +1084,22 @@ async function startSimScanner() {
       "Barcode camera error: " +
       error.message;
 
+
+    document.getElementById(
+      "startSimButton"
+    ).classList.remove(
+      "hidden"
+    );
+
+
+    document.getElementById(
+      "stopSimButton"
+    ).classList.add(
+      "hidden"
+    );
+
   }
+
 }
 
 
@@ -817,22 +1107,30 @@ async function startSimScanner() {
  * HANDLE SIM RESULT
  ******************************************************/
 
-async function handleSimResult(decodedText) {
+async function handleSimResult(
+  decodedText
+) {
 
   document.getElementById(
     "sim"
-  ).value = decodedText;
+  ).value =
+    decodedText;
+
 
   document.getElementById(
     "simStatusBox"
   ).textContent =
     "SIM barcode scanned successfully.";
 
+
   await stopScanner();
+
 
   document.getElementById(
     "recordCard"
-  ).classList.remove("hidden");
+  ).classList.remove(
+    "hidden"
+  );
 
 }
 
@@ -843,43 +1141,96 @@ async function handleSimResult(decodedText) {
 
 async function stopScanner() {
 
-  try {
+  const scanner =
+    currentScanner;
 
-    if (currentScanner) {
 
-      await currentScanner.stop();
+  if (!scanner) {
 
-      await currentScanner.clear();
+    resetScannerButtons();
 
-    }
-
-  } catch (error) {
-
-    console.log(error);
+    return;
 
   }
 
-  currentScanner = null;
 
-  qrScanner = null;
+  currentScanner =
+    null;
 
-  simScanner = null;
+
+  try {
+
+    await scanner.stop();
+
+  } catch (error) {
+
+    console.log(
+      "Scanner stop:",
+      error
+    );
+
+  }
+
+
+  try {
+
+    await scanner.clear();
+
+  } catch (error) {
+
+    console.log(
+      "Scanner clear:",
+      error
+    );
+
+  }
+
+
+  qrScanner =
+    null;
+
+  simScanner =
+    null;
+
+
+  resetScannerButtons();
+
+}
+
+
+/******************************************************
+ * RESET SCANNER BUTTONS
+ ******************************************************/
+
+function resetScannerButtons() {
 
   document.getElementById(
     "startQrButton"
-  ).classList.remove("hidden");
+  ).classList.remove(
+    "hidden"
+  );
+
 
   document.getElementById(
     "stopQrButton"
-  ).classList.add("hidden");
+  ).classList.add(
+    "hidden"
+  );
+
 
   document.getElementById(
     "startSimButton"
-  ).classList.remove("hidden");
+  ).classList.remove(
+    "hidden"
+  );
+
 
   document.getElementById(
     "stopSimButton"
-  ).classList.add("hidden");
+  ).classList.add(
+    "hidden"
+  );
+
 }
 
 
@@ -892,11 +1243,6 @@ async function saveRecord() {
   const button =
     document.getElementById(
       "saveButton"
-    );
-
-  const message =
-    document.getElementById(
-      "message"
     );
 
 
@@ -944,14 +1290,19 @@ async function saveRecord() {
         .getElementById("remarks")
         .value
         .trim()
+
   };
 
 
   /*
-   * BASIC FRONT-END VALIDATION
+   * Validate IMEI
    */
 
-  if (!/^\d{14,16}$/.test(record.imei)) {
+  if (
+    !/^\d{14,16}$/.test(
+      record.imei
+    )
+  ) {
 
     showMessage(
       "Please check the IMEI number.",
@@ -959,8 +1310,13 @@ async function saveRecord() {
     );
 
     return;
+
   }
 
+
+  /*
+   * Validate SIM
+   */
 
   if (!record.sim) {
 
@@ -970,8 +1326,13 @@ async function saveRecord() {
     );
 
     return;
+
   }
 
+
+  /*
+   * Validate model
+   */
 
   if (!record.model) {
 
@@ -981,8 +1342,13 @@ async function saveRecord() {
     );
 
     return;
+
   }
 
+
+  /*
+   * Validate relay
+   */
 
   if (!record.relay) {
 
@@ -992,10 +1358,13 @@ async function saveRecord() {
     );
 
     return;
+
   }
 
 
-  button.disabled = true;
+  button.disabled =
+    true;
+
 
   button.textContent =
     "SAVING...";
@@ -1019,12 +1388,16 @@ async function saveRecord() {
           method: "POST",
 
           headers: {
+
             "Content-Type":
               "text/plain;charset=utf-8"
+
           },
 
           body:
-            JSON.stringify(record)
+            JSON.stringify(
+              record
+            )
 
         }
 
@@ -1041,33 +1414,50 @@ async function saveRecord() {
     ) {
 
       showMessage(
+
         "✅ Record saved successfully. Row: " +
         result.row,
+
         true
+
       );
+
 
       button.textContent =
         "SAVED";
 
+
     } else {
 
       throw new Error(
+
         result.message ||
         "The backend rejected the record."
+
       );
+
     }
 
 
   } catch (error) {
 
+    console.error(error);
+
+
     showMessage(
+
       "❌ Save failed: " +
       error.message +
       " Your scanned data is still on this screen. Do not refresh.",
+
       false
+
     );
 
-    button.disabled = false;
+
+    button.disabled =
+      false;
+
 
     button.textContent =
       "RETRY SAVE";
@@ -1091,17 +1481,21 @@ function showMessage(
       "message"
     );
 
+
   message.textContent =
     text;
+
 
   message.className =
     success
       ? "success-message"
       : "error-message";
 
+
   message.classList.remove(
     "hidden"
   );
+
 }
 
 
@@ -1109,78 +1503,100 @@ function showMessage(
  * RESET FOR NEXT DEVICE
  ******************************************************/
 
-function resetScanner() {
+async function resetScanner() {
 
-  stopScanner();
+  await stopScanner();
 
-  qrScanned = false;
 
-  simScanned = false;
+  qrScanned =
+    false;
+
+  simScanned =
+    false;
+
 
   document.getElementById(
     "imei"
   ).value = "";
 
+
   document.getElementById(
     "sim"
   ).value = "";
+
 
   document.getElementById(
     "model"
   ).value = "";
 
+
   document.getElementById(
     "relay"
   ).value = "";
 
+
   document.getElementById(
     "status"
-  ).value = "In Stock";
+  ).value =
+    "In Stock";
+
 
   document.getElementById(
     "simStatus"
-  ).value = "Active";
+  ).value =
+    "Active";
+
 
   document.getElementById(
     "lockingStatus"
-  ).value = "Not locked";
+  ).value =
+    "Not locked";
+
 
   document.getElementById(
     "remarks"
   ).value = "";
 
+
   document.getElementById(
     "qrResultCard"
-  ).classList.add("hidden");
+  ).classList.add(
+    "hidden"
+  );
+
 
   document.getElementById(
     "simCard"
-  ).classList.add("hidden");
+  ).classList.add(
+    "hidden"
+  );
+
 
   document.getElementById(
     "recordCard"
-  ).classList.add("hidden");
+  ).classList.add(
+    "hidden"
+  );
+
 
   document.getElementById(
     "message"
-  ).classList.add("hidden");
+  ).classList.add(
+    "hidden"
+  );
+
 
   document.getElementById(
     "statusBox"
   ).textContent =
     "Ready to scan GPS QR code.";
 
-  document.getElementById(
-    "startQrButton"
-  ).classList.remove("hidden");
 
-  document.getElementById(
-    "stopQrButton"
-  ).classList.add("hidden");
+  resetScannerButtons();
 
 }
 
 </script>
 
 </body>
-  </html>
+</html>
